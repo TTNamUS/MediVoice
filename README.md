@@ -101,7 +101,7 @@ Full diagram + design decisions: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 ### 1. Clone and configure
 
 ```bash
-git clone https://github.com/GITHUB_USER/medivoice
+git clone https://github.com/TTNamUS/medivoice
 cd medivoice
 cp apps/server/.env.example apps/server/.env.local
 # Fill in your API keys
