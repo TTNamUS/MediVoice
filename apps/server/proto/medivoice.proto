@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+package medivoice;
+
+// MediVoice gRPC service — health, metrics, eval trigger.
+// Server runs on :50051 alongside FastAPI on :8000.
+// gRPC reflection enabled — use grpcurl without the .proto file:
+//   grpcurl -plaintext localhost:50051 medivoice.MediVoice/Check
+service MediVoice {
+  // Health check: verifies Qdrant + Postgres connectivity.
+  rpc Check(HealthRequest) returns (HealthResponse);
+
+  // Returns TTFB latency percentiles + session counters from the in-memory ring buffer.
+  rpc GetMetrics(MetricsRequest) returns (MetricsResponse);
+
+  // Kick off an offline eval run as a background subprocess.
+  rpc TriggerEval(EvalRequest) returns (EvalResponse);
+}
+
+// ── Health ────────────────────────────────────────────────────────────────────
+
+message HealthRequest {}
+
+enum ServingStatus {
+  UNKNOWN      = 0;
+  SERVING      = 1;
+  NOT_SERVING  = 2;
+}
+
+message HealthCheck {
+  string name    = 1;
+  bool   ok      = 2;
+  string message = 3;  // human-readable detail
+}
+
+message HealthResponse {
+  ServingStatus       status = 1;
+  repeated HealthCheck checks = 2;
+}
+
+// ── Metrics ───────────────────────────────────────────────────────────────────
+
+message MetricsRequest {
+  // Window in minutes to compute percentiles over (default 5).
+  int32 window_minutes = 1;
+}
+
+message MetricsResponse {
+  double p50_ms               = 1;  // voice-to-voice TTFB p50
+  double p95_ms               = 2;  // voice-to-voice TTFB p95
+  int32  active_sessions      = 3;
+  int64  total_turns_24h      = 4;
+  int32  sample_count         = 5;  // turns in the window
+  string transport_breakdown  = 6;  // JSON: {"browser": N, "sip": M}
+}
+
+// ── Eval trigger ──────────────────────────────────────────────────────────────
+
+message EvalRequest {
+  // Optional: limit number of cases (0 = run all).
+  int32  limit    = 1;
+  // Optional: filter to one category (empty = all).
+  string category = 2;
+}
+
+message EvalResponse {
+  string job_id   = 1;
+  string status   = 2;  // "started" | "error"
+  string message  = 3;
+}

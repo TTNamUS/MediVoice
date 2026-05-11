@@ -1,0 +1,231 @@
+{
+  "title": "MediVoice — Voice AI Receptionist",
+  "uid": "medivoice-main",
+  "version": 1,
+  "schemaVersion": 38,
+  "refresh": "30s",
+  "time": { "from": "now-24h", "to": "now" },
+  "tags": ["medivoice", "voice-ai"],
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "TTFB p50 / p95 by Transport",
+      "description": "Voice-to-voice time-to-first-byte: LiveKit browser WebRTC vs LiveKit SIP. Targets: browser <800ms p50, SIP <1000ms p50.",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "histogram_quantile(0.50, sum(rate(medivoice_ttfb_ms_bucket{entrypoint=\"browser\"}[5m])) by (le))",
+          "legendFormat": "Browser p50"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "histogram_quantile(0.95, sum(rate(medivoice_ttfb_ms_bucket{entrypoint=\"browser\"}[5m])) by (le))",
+          "legendFormat": "Browser p95"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "histogram_quantile(0.50, sum(rate(medivoice_ttfb_ms_bucket{entrypoint=\"sip\"}[5m])) by (le))",
+          "legendFormat": "LiveKit SIP p50"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "histogram_quantile(0.95, sum(rate(medivoice_ttfb_ms_bucket{entrypoint=\"sip\"}[5m])) by (le))",
+          "legendFormat": "LiveKit SIP p95"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 800 },
+              { "color": "red", "value": 1200 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Cost / Conversation (rolling 24h)",
+      "description": "Estimated cost per 3-minute conversation. Target: < $0.05. Formula: (tokens_in × $0.00025 + tokens_out × $0.00125) / 1000 per call.",
+      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "sum(increase(medivoice_llm_tokens_in_total[24h])) * 0.00000025 + sum(increase(medivoice_llm_tokens_out_total[24h])) * 0.00000125",
+          "legendFormat": "Total cost 24h"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.04 },
+              { "color": "red", "value": 0.06 }
+            ]
+          }
+        }
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] } }
+    },
+    {
+      "id": 3,
+      "type": "piechart",
+      "title": "Agent Distribution (% turns)",
+      "description": "Percentage of turns handled by each specialist agent. High triage % = many unanswered handoffs.",
+      "gridPos": { "x": 12, "y": 4, "w": 6, "h": 4 },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "sum by (agent) (increase(medivoice_agent_turns_total[24h]))",
+          "legendFormat": "{{agent}}"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "gauge",
+      "title": "Hallucination Rate (7-day rolling %)",
+      "description": "% of eval cases where the bot stated facts NOT grounded in retrieved context or DB. Medical domain threshold: < 5%. Red = immediate action required.",
+      "gridPos": { "x": 0, "y": 8, "w": 6, "h": 6 },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "medivoice_eval_hallucination_rate_pct",
+          "legendFormat": "Hallucination rate"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 20,
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 3 },
+              { "color": "red", "value": 5 }
+            ]
+          }
+        }
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "showThresholdLabels": true }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Eval Pass Rate Trend (nightly)",
+      "description": "Nightly offline eval pass rate (%). Target: ≥ 85%. Drop of >5pp triggers drift alert in CI.",
+      "gridPos": { "x": 6, "y": 8, "w": 10, "h": 6 },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "medivoice_eval_pass_rate_pct",
+          "legendFormat": "Pass rate %"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "medivoice_eval_hallucination_rate_pct",
+          "legendFormat": "Hallucination rate %"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 80 },
+              { "color": "red", "value": 70 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 6,
+      "type": "bargauge",
+      "title": "Tool Call Latency p95 by Tool",
+      "description": "p95 execution time per tool call. lookup_patient + check_availability should be < 200ms each.",
+      "gridPos": { "x": 16, "y": 8, "w": 8, "h": 6 },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "histogram_quantile(0.95, sum by (tool, le) (rate(medivoice_tool_latency_ms_bucket[10m])))",
+          "legendFormat": "{{tool}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 500 },
+              { "color": "red", "value": 1500 }
+            ]
+          }
+        }
+      },
+      "options": { "orientation": "horizontal" }
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Interruption / Barge-in Rate",
+      "description": "Number of times a caller interrupted the bot mid-sentence per minute. High rate may indicate slow TTS or over-verbose responses.",
+      "gridPos": { "x": 0, "y": 14, "w": 12, "h": 6 },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "sum(rate(medivoice_interruptions_total[1m]))",
+          "legendFormat": "Interruptions/min"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "short" }
+      }
+    },
+    {
+      "id": 8,
+      "type": "stat",
+      "title": "Active Sessions",
+      "description": "Currently active voice sessions split by transport.",
+      "gridPos": { "x": 12, "y": 14, "w": 12, "h": 6 },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "medivoice_active_sessions{entrypoint=\"browser\"}",
+          "legendFormat": "Browser WebRTC"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "medivoice_active_sessions{entrypoint=\"sip\"}",
+          "legendFormat": "LiveKit SIP"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "steps": [
+              { "color": "blue", "value": null }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "orientation": "horizontal",
+        "textMode": "value_and_name"
+      }
+    }
+  ]
+}

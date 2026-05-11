@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-test:
+    name: Lint + Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4.2.2
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5.6.0
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "latest"
+
+      - name: Install dependencies
+        working-directory: apps/server
+        run: uv pip install --system -e ".[dev]"
+
+      - name: Ruff lint
+        working-directory: apps/server
+        run: uv run ruff check .
+
+      - name: Ruff format check
+        working-directory: apps/server
+        run: uv run ruff format --check .
+
+      - name: Run tests
+        working-directory: apps/server
+        env:
+          # Provide stub values so Settings can instantiate without .env.local
+          ANTHROPIC_API_KEY: "sk-ant-test"
+          DEEPGRAM_API_KEY: "dg-test"
+          CARTESIA_API_KEY: "ca-test"
+          DAILY_API_KEY: "daily-test"
+          DAILY_DOMAIN: "https://test.daily.co"
+          OTEL_EXPORTER_OTLP_ENDPOINT: "http://localhost:4319"
+          APP_ENV: "test"
+        run: uv run pytest -v
+
+  k8s-validate:
+    name: K8s manifest dry-run
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' || contains(github.event.head_commit.modified, 'k8s/')
+
+    steps:
+      - uses: actions/checkout@v4.2.2
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: "v1.29.0"
+
+      - name: Dry-run apply k8s manifests
+        # Validates YAML schema + API structure without a real cluster.
+        # secret.yaml.example is excluded (it's a template, not a real manifest).
+        run: |
+          kubectl apply --dry-run=client \
+            -f k8s/namespace.yaml \
+            -f k8s/configmap.yaml \
+            -f k8s/deployment.yaml \
+            -f k8s/service.yaml \
+            -f k8s/hpa.yaml \
+            -f k8s/ingress.yaml
+
+  docker-lint:
+    name: Dockerfile lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4.2.2
+
+      - name: Hadolint — Dockerfile best practices
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: apps/server/Dockerfile
+          ignore: DL3008,DL3013   # apt pin versions; pip no-cache already set

@@ -1,0 +1,31 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: medivoice-server
+  namespace: medivoice
+  labels:
+    app.kubernetes.io/name: medivoice
+  annotations:
+    # cert-manager issues Let's Encrypt TLS automatically
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    # gRPC requires HTTP/2
+    nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - api.medivoice.example.com
+      secretName: medivoice-tls
+  rules:
+    - host: api.medivoice.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: medivoice-server
+                port:
+                  name: http

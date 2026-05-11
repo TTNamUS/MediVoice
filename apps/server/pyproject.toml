@@ -1,0 +1,55 @@
+[project]
+name = "medivoice-server"
+version = "0.1.0"
+description = "MediVoice FastAPI + Pipecat bot server"
+requires-python = ">=3.11"
+dependencies = [
+    "pipecat-ai[livekit,deepgram,cartesia,anthropic,openai,google,silero]>=0.0.60",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
+    "python-dotenv>=1.0.0",
+    "pydantic-settings>=2.4.0",
+    "asyncpg>=0.29.0",
+    "opentelemetry-sdk>=1.26.0",
+    "opentelemetry-exporter-otlp-proto-grpc>=1.26.0",
+    "opentelemetry-instrumentation-fastapi>=0.47b0",
+    "opentelemetry-instrumentation-httpx>=0.47b0",
+    "httpx>=0.27.0",
+    "loguru>=0.7.0",
+    # RAG
+    "qdrant-client>=1.11.0",
+    "sentence-transformers>=3.0.0", # cross-encoder/ms-marco-MiniLM-L-6-v2
+    "PyYAML>=6.0",
+    # Booking + Text-to-SQL
+    "sqlglot>=25.0.0",
+    "anthropic>=0.34.0", # text-to-SQL generation (Claude Haiku)
+    # LiveKit SIP transport
+    "livekit>=0.17.0",
+    "livekit-api>=0.7.0",
+    # gRPC health/metrics/eval endpoint
+    "grpcio>=1.66.0",
+    "grpcio-reflection>=1.66.0",
+    "grpcio-tools>=1.66.0", # protoc compiler (dev use)
+    "tenacity>=9.0.0", # exponential backoff on API retries
+    "prometheus-client>=0.21.0", # metrics export for Prometheus scraping
+    "langfuse>=2.0.0", # LLM observability — prompt/completion/cost tracking
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "ruff>=0.6.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["bot", "api", "db", "ingest", "eval", "scripts"]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.12",
+]

@@ -1,0 +1,22 @@
+# Pipecat Cloud deployment config
+# https://docs.pipecat.ai/deployment/pipecat-cloud
+
+[project]
+name = "medivoice"
+main = "main.py"
+
+[services]
+# CPU-optimized worker for audio processing
+worker_type = "cpu"
+min_instances = 1
+max_instances = 10
+
+[env]
+# These are set via Pipecat Cloud secrets, not hardcoded
+ANTHROPIC_API_KEY = { secret = "anthropic-api-key" }
+DEEPGRAM_API_KEY  = { secret = "deepgram-api-key" }
+CARTESIA_API_KEY  = { secret = "cartesia-api-key" }
+LIVEKIT_URL       = { secret = "livekit-url" }
+LIVEKIT_API_KEY   = { secret = "livekit-api-key" }
+LIVEKIT_API_SECRET = { secret = "livekit-api-secret" }
+APP_ENV           = "production"

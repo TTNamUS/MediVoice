@@ -1,0 +1,20 @@
+[project]
+name = "medivoice"
+version = "0.1.0"
+description = "Production-grade real-time voice AI bot for clinic use cases"
+requires-python = ">=3.11"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["bot", "api", "db", "ingest"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["apps/server/tests"]

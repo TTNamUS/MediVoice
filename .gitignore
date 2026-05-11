@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+.venv/
+venv/
+.env
+.env.local
+*.env.local
+*.egg-info/
+dist/
+build/
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Node
+node_modules/
+.next/
+out/
+.vercel/
+*.tsbuildinfo
+
+# Secrets
+*.pem
+*.key
+secrets/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# Infra
+infra/postgres-data/
+infra/qdrant-data/
+infra/langfuse-data/
+
+# Eval reports (keep datasets, ignore generated reports)
+eval/reports/*.json
+
+# Logs
+*.log

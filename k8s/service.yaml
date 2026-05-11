@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: medivoice-server
+  namespace: medivoice
+  labels:
+    app.kubernetes.io/name: medivoice
+    app.kubernetes.io/component: server
+spec:
+  selector:
+    app: medivoice-server
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8000
+      protocol: TCP
+    - name: grpc
+      port: 50051
+      targetPort: 50051
+      protocol: TCP

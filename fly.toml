@@ -1,0 +1,52 @@
+# Fly.io deployment config — fallback if Pipecat Cloud is unavailable.
+# Deploy: fly deploy --app medivoice-server
+# Secrets: fly secrets set ANTHROPIC_API_KEY=sk-ant-... DEEPGRAM_API_KEY=... etc.
+
+app = "medivoice-server"
+primary_region = "iad"     # US-East — closest to LiveKit NA region
+
+[build]
+  dockerfile = "apps/server/Dockerfile"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = false   # voice bots must not cold-start mid-call
+  auto_start_machines = true
+  min_machines_running = 1
+
+[[services]]
+  protocol = "tcp"
+  internal_port = 50051
+
+  [[services.ports]]
+    port = 50051
+    handlers = ["tls"]       # gRPC-TLS
+
+  [services.concurrency]
+    type = "connections"
+    soft_limit = 25
+    hard_limit = 30
+
+[vm]
+  cpu_kind = "shared"
+  cpus = 2
+  memory_mb = 1024
+
+[[statics]]
+  # No static files — pure API server
+
+[env]
+  APP_ENV = "production"
+  LOG_LEVEL = "INFO"
+  OTEL_SERVICE_NAME = "medivoice-server"
+
+[checks]
+  [checks.health]
+    grace_period = "10s"
+    interval = "15s"
+    method = "GET"
+    path = "/health"
+    port = 8000
+    timeout = "5s"
+    type = "http"
